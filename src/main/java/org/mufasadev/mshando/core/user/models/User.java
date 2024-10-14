@@ -41,8 +41,7 @@ public class User {
     private boolean accountLocked;
 
     @CreatedDate
-    @Column(updatable = false,nullable = false)
-    @Temporal(TemporalType.TIMESTAMP)
+    @Column(updatable = false,nullable = false, columnDefinition = "timestamp default current_timestamp")
     private LocalDateTime createdAt;
     @LastModifiedDate
     @Column(insertable = false)

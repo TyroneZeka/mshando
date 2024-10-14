@@ -2,11 +2,14 @@ package org.mufasadev.mshando.core.user.models;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "roles")
 public class Role {
     @Id
