@@ -3,7 +3,9 @@ package org.mufasadev.mshando.core.user.models;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.*;
+import org.mufasadev.mshando.core.tasker.models.Tasker;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -24,9 +26,13 @@ import java.util.Set;
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "user_id")
     private Integer id;
     private String firstname;
     private String lastname;
+    @Size(min = 10, max = 15)
+    private String phone;
+    private String profilePicture;
     @NotBlank
     private String username;
     @NotBlank
@@ -47,13 +53,15 @@ public class User {
     @Column(insertable = false)
     private LocalDateTime updatedAt;
 
-    @Getter
-    @Setter
     @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(name = "user_role",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles = new HashSet<>();
+
+    @ToString.Exclude
+    @OneToOne(mappedBy = "user",cascade = {CascadeType.PERSIST, CascadeType.MERGE},orphanRemoval = true)
+    private Tasker tasker;
 
     public User(String username, String email, String encode) {
         this.username = username;

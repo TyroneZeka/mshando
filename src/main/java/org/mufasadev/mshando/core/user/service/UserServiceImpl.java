@@ -6,6 +6,8 @@ import org.mufasadev.mshando.core.security.email.EmailService;
 import org.mufasadev.mshando.core.security.email.EmailTemplate;
 import org.mufasadev.mshando.core.security.jwt.JwtUtils;
 import org.mufasadev.mshando.core.security.service.UserDetailsImpl;
+import org.mufasadev.mshando.core.tasker.models.Tasker;
+import org.mufasadev.mshando.core.tasker.repository.TaskerRepository;
 import org.mufasadev.mshando.core.user.models.AppRole;
 import org.mufasadev.mshando.core.user.models.Role;
 import org.mufasadev.mshando.core.user.models.Token;
@@ -27,7 +29,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -45,6 +46,8 @@ public class UserServiceImpl implements UserService {
     private final RoleRepository roleRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
+    private final TaskerRepository taskerRepository;
+    private final JwtUtils jwtService;
     @Value("${application.mailing.frontend.activation-url}")
     private String activationUrl;
 
@@ -61,15 +64,15 @@ public class UserServiceImpl implements UserService {
             return new ResponseEntity<Object>(map, HttpStatus.NOT_FOUND);
         }
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        ResponseCookie jwtCookie = jwtUtils.generateJwtCookie(userDetails);
-
-        List<String> roles = userDetails.getAuthorities().stream()
+        UserDetailsImpl user = (UserDetailsImpl) authentication.getPrincipal();
+        var claims = new HashMap<String, Object>();
+        claims.put("fullname", user.getFullname());
+        var jwtToken = jwtService.generateToken(claims,user);
+        List<String> roles = user.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .toList();
-        UserResponseInfo response = new UserResponseInfo(userDetails.getId(), userDetails.getUsername(), roles);
-        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, jwtCookie.toString()).body(response);
+        UserResponseInfo response = new UserResponseInfo(user.getId(), user.getUsername(), roles, jwtToken);
+        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, jwtToken).body(response);
     }
 
     @Override
@@ -86,6 +89,7 @@ public class UserServiceImpl implements UserService {
                 .enabled(false)
                 .accountLocked(false)
                 .build();
+        var tasker = Tasker.builder().build();
 
         Set<String> strRoles = signupRequest.getRole();
         Set<Role> roles = new HashSet<>();
@@ -105,9 +109,11 @@ public class UserServiceImpl implements UserService {
                         break;
 
                     case "tasker":
+                        tasker.setUser(user);
                         Role taskerRole = roleRepository.findByName(AppRole.ROLE_TASKER)
                                 .orElseThrow(()-> new RuntimeException("Error: Role is not found"));
                         roles.add(taskerRole);
+                        user.setRoles(roles);
                         break;
 
                     default:
@@ -120,6 +126,7 @@ public class UserServiceImpl implements UserService {
         }
         user.setRoles(roles);
         userRepository.save(user);
+        taskerRepository.save(tasker);
         sendValidationEmail(user);
         return ResponseEntity.ok(new MessageResponse("User Registered successfully"));
     }
@@ -155,7 +162,7 @@ public class UserServiceImpl implements UserService {
                 EmailTemplate.ACTIVATE_ACCOUNT,
                 user.getFullName(),
                 activationUrl,
-                "Book Social Network Account Activation",
+                "Mshando Account Activation",
                 newToken
         );
     }
@@ -178,7 +185,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ResponseEntity<?> logoutUser() {
-        ResponseCookie cookie = jwtUtils.generateCleanJwtCookie();
+        ResponseCookie cookie = jwtService.generateCleanJwtCookie();
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(new MessageResponse("Logged out successfully!"));
     }
 }
