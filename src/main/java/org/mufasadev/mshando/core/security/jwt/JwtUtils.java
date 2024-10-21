@@ -6,7 +6,6 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
-import org.mufasadev.mshando.core.security.service.UserDetailsImpl;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.GrantedAuthority;
@@ -28,14 +27,6 @@ public class JwtUtils {
     @Value("${application.security.jwt.cookieName}")
     private String jwtCookie;
 
-    public String getJwtFromCookie(final HttpServletRequest request) {
-        Cookie cookie = WebUtils.getCookie(request,jwtCookie);
-        if (cookie != null) {
-            return cookie.getValue();
-        }
-        return null;
-    }
-
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -55,7 +46,7 @@ public class JwtUtils {
                 .getBody();
     }
 
-    public String generateToken(HashMap<String, Object> claims, UserDetailsImpl userDetails) {
+    public String generateToken(HashMap<String, Object> claims, UserDetails userDetails) {
 
         return buildToken(claims, userDetails, jwtExpiration);
     }

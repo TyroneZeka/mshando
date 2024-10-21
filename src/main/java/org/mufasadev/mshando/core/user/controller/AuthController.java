@@ -7,6 +7,7 @@ import org.mufasadev.mshando.core.user.payload.LoginRequest;
 import org.mufasadev.mshando.core.user.payload.SignupRequest;
 import org.mufasadev.mshando.core.user.service.UserService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -27,8 +28,8 @@ public class AuthController {
     }
 
     @GetMapping("/activate-account")
-    public void confirm(@RequestParam String token) throws Exception{
-        userService.activateAccount(token);
+    public void confirm(@RequestParam String token, Authentication activeUser) throws Exception{
+        userService.activateAccount(token,activeUser);
     }
 
     @PostMapping("/logout")

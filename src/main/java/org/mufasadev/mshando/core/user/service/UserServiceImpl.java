@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.mufasadev.mshando.core.security.email.EmailService;
 import org.mufasadev.mshando.core.security.email.EmailTemplate;
 import org.mufasadev.mshando.core.security.jwt.JwtUtils;
-import org.mufasadev.mshando.core.security.service.UserDetailsImpl;
 import org.mufasadev.mshando.core.tasker.models.Tasker;
 import org.mufasadev.mshando.core.tasker.repository.TaskerRepository;
 import org.mufasadev.mshando.core.user.models.AppRole;
@@ -39,7 +38,6 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
-    private final JwtUtils jwtUtils;
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final TokenRepository tokenRepository;
@@ -64,9 +62,9 @@ public class UserServiceImpl implements UserService {
             return new ResponseEntity<Object>(map, HttpStatus.NOT_FOUND);
         }
 
-        UserDetailsImpl user = (UserDetailsImpl) authentication.getPrincipal();
+        var user = (User) authentication.getPrincipal();
         var claims = new HashMap<String, Object>();
-        claims.put("fullname", user.getFullname());
+        claims.put("fullname", user.fullName());
         var jwtToken = jwtService.generateToken(claims,user);
         List<String> roles = user.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -160,7 +158,7 @@ public class UserServiceImpl implements UserService {
         emailService.sendEmail(
                 user.getEmail(),
                 EmailTemplate.ACTIVATE_ACCOUNT,
-                user.getFullName(),
+                user.fullName(),
                 activationUrl,
                 "Mshando Account Activation",
                 newToken
@@ -168,9 +166,10 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void activateAccount(String token) throws MessagingException {
+    public void activateAccount(String token, Authentication activeUser) throws MessagingException {
         Token savedToken = tokenRepository.findByToken(token)
                 .orElseThrow(() -> new RuntimeException("Token not found"));
+        if(savedToken.getUser().isEnabled()) throw new MessagingException("User is already enabled.");
         if(LocalDateTime.now().isAfter(savedToken.getExpiresAt())) {
             sendValidationEmail(savedToken.getUser());
             throw new MessagingException("Token is expired, a new token has been created");

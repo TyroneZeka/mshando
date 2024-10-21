@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.mufasadev.mshando.core.security.service.UserDetailsServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -43,6 +44,7 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         }
         jwt = authHeader.substring(7);
         username = jwtService.extractUsername(jwt);
+        logger.debug("AuthTokenFilter: Username: {}", username);
         if(username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
             logger.debug("AuthTokenFilter: Token: {}", jwt);
@@ -54,11 +56,13 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                 }
                 catch(Exception e) {
                     logger.error("AuthTokenFilter: UsernamePasswordError {}", e.getMessage());
+                    throw new LockedException(e.getMessage());
                 }
                 logger.debug("AuthTokenFilter: Authentication success");
             }
         }
         filterChain.doFilter(request, response);
+        //TODO Catch token expired exception.
     }
 
 }

@@ -9,10 +9,17 @@ import org.mufasadev.mshando.core.tasker.models.Tasker;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
+import java.security.Principal;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Data
 @Getter
@@ -23,7 +30,9 @@ import java.util.Set;
 @Table(name = "_user")
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-public class User {
+public class User implements UserDetails, Principal {
+    //TODO: Change implementation to implement UserDetails here without UserDetailsImpl
+
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "user_id")
@@ -63,13 +72,41 @@ public class User {
     @OneToOne(mappedBy = "user",cascade = {CascadeType.PERSIST, CascadeType.MERGE},orphanRemoval = true)
     private Tasker tasker;
 
-    public User(String username, String email, String encode) {
+    public User(String username, String email, String password) {
         this.username = username;
         this.email = email;
-        this.password = encode;
+        this.password = password;
     }
 
-    public String getFullName(){
+    public String fullName(){
         return firstname + " " + lastname;
+    }
+
+    @Override
+    public String getName() {
+        return email;
+    }
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return this.roles
+                .stream()
+                .map(role -> new SimpleGrantedAuthority(role.getName().name()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return !accountLocked;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
     }
 }
