@@ -2,6 +2,7 @@ package org.mufasadev.mshando.core.user.service;
 
 import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
+import org.mufasadev.mshando.core.handler.ResourceNotFoundException;
 import org.mufasadev.mshando.core.security.email.EmailService;
 import org.mufasadev.mshando.core.security.email.EmailTemplate;
 import org.mufasadev.mshando.core.security.jwt.JwtUtils;
@@ -94,7 +95,7 @@ public class UserServiceImpl implements UserService {
 
         if(strRoles == null || strRoles.isEmpty()) {
             Role userRole = roleRepository.findByName(AppRole.ROLE_CLIENT)
-                    .orElseThrow(()-> new RuntimeException("Error: Role is not found"));
+                    .orElseThrow(()-> new ResourceNotFoundException("Role","name",AppRole.ROLE_CLIENT.name()));
             roles.add(userRole);
         }
         else{
@@ -102,21 +103,21 @@ public class UserServiceImpl implements UserService {
                 switch (role) {
                     case "admin":
                         Role adminRole = roleRepository.findByName(AppRole.ROLE_ADMIN)
-                                .orElseThrow(()-> new RuntimeException("Error: Role is not found"));
+                                .orElseThrow(()-> new ResourceNotFoundException("Role","name",AppRole.ROLE_ADMIN.name()));
                         roles.add(adminRole);
                         break;
 
                     case "tasker":
                         tasker.setUser(user);
                         Role taskerRole = roleRepository.findByName(AppRole.ROLE_TASKER)
-                                .orElseThrow(()-> new RuntimeException("Error: Role is not found"));
+                                .orElseThrow(()-> new ResourceNotFoundException("Role","name",AppRole.ROLE_TASKER.name()));
                         roles.add(taskerRole);
                         user.setRoles(roles);
                         break;
 
                     default:
                         Role clientRole = roleRepository.findByName(AppRole.ROLE_CLIENT)
-                                .orElseThrow(()-> new RuntimeException("Error: Role is not found"));
+                                .orElseThrow(()-> new ResourceNotFoundException("Role","name",AppRole.ROLE_CLIENT.name()));
                         roles.add(clientRole);
 
                 }
@@ -168,14 +169,14 @@ public class UserServiceImpl implements UserService {
     @Override
     public void activateAccount(String token, Authentication activeUser) throws MessagingException {
         Token savedToken = tokenRepository.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Token not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Token","token",token));
         if(savedToken.getUser().isEnabled()) throw new MessagingException("User is already enabled.");
         if(LocalDateTime.now().isAfter(savedToken.getExpiresAt())) {
             sendValidationEmail(savedToken.getUser());
             throw new MessagingException("Token is expired, a new token has been created");
         }
         var user = userRepository.findByEmail(savedToken.getUser().getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User","email",savedToken.getUser().getEmail()));
         user.setEnabled(true);
         userRepository.save(user);
         savedToken.setValidatedAt(LocalDateTime.now());

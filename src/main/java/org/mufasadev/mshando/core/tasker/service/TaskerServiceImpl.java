@@ -2,6 +2,7 @@ package org.mufasadev.mshando.core.tasker.service;
 
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.mufasadev.mshando.core.handler.ResourceNotFoundException;
 import org.mufasadev.mshando.core.tasker.models.Tasker;
 import org.mufasadev.mshando.core.tasker.payload.TaskerDTO;
 import org.mufasadev.mshando.core.tasker.payload.TaskerRequest;
@@ -37,6 +38,7 @@ public class TaskerServiceImpl implements TaskerService {
             taskerDTO.setFullname(user.fullName());
             taskerDTO.setEmail(user.getEmail());
             taskerDTO.setPhone(user.getPhone());
+            taskerDTO.setSkills();
             return new ResponseEntity<TaskerDTO>(taskerDTO, HttpStatus.OK);
         }
         throw new RuntimeException("User is locked");
@@ -68,7 +70,14 @@ public class TaskerServiceImpl implements TaskerService {
         List<Tasker> taskers = taskersPage.getContent();
         if(taskers.isEmpty()) throw new RuntimeException("Tasker list is empty");
 
-        List<TaskerDTO> taskerDTOS = taskers.stream().map(tasker->modelMapper.map(tasker,TaskerDTO.class)).toList();
+        List<TaskerDTO> taskerDTOS = taskers.stream().map(tasker->{
+                TaskerDTO taskerDTO = modelMapper.map(tasker,TaskerDTO.class);
+                taskerDTO.setFullname(tasker.getUser().fullName());
+                taskerDTO.setEmail(tasker.getUser().getEmail());
+                taskerDTO.setPhone(tasker.getUser().getPhone());
+                return taskerDTO;
+        }).toList();
+
         TaskerResponse taskerResponse = new TaskerResponse();
         taskerResponse.setContent(taskerDTOS);
         taskerResponse.setPageNumber(taskersPage.getNumber());
@@ -82,14 +91,13 @@ public class TaskerServiceImpl implements TaskerService {
     @Override
     public ResponseEntity<TaskerDTO> updateTasker(Authentication activeUser, Integer taskerId, TaskerRequest taskerRequest) {
         User user = (User) activeUser.getPrincipal();
-        Tasker tasker = taskerRepository.findById(taskerId).orElseThrow(()->new RuntimeException("Tasker not found"));
-        if(user.getTasker() != tasker){
-            throw new RuntimeException("Tasker not found");
-        }
+        Tasker tasker = taskerRepository.findById(taskerId).orElseThrow(()->new ResourceNotFoundException("Tasker","id",taskerId));
         tasker.setBio(taskerRequest.getBio());
         tasker.setLocation(taskerRequest.getLocation());
         tasker.setHourlyRate(taskerRequest.getHourlyRate());
         tasker.setRating(taskerRequest.getRating());
+        tasker.setAvailableFrom(taskerRequest.getAvailableFrom());
+        tasker.setAvailableTo(taskerRequest.getAvailableTo());
         Tasker savedTasker = taskerRepository.save(tasker);
         TaskerDTO taskerDTO = modelMapper.map(savedTasker, TaskerDTO.class);
         taskerDTO.setFullname(user.fullName());

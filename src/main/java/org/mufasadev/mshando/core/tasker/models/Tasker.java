@@ -5,8 +5,11 @@ import lombok.*;
 import org.mufasadev.mshando.core.user.models.User;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -27,8 +30,8 @@ public class Tasker {
     private Double longitude;
     private Double hourlyRate;
     private Double rating;
-    private LocalDateTime availableFrom;
-    private LocalDateTime availableTo;
+    private LocalDate availableFrom;
+    private LocalDate availableTo;
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
@@ -36,7 +39,7 @@ public class Tasker {
             joinColumns = @JoinColumn(name = "tasker_id"),
             inverseJoinColumns = @JoinColumn(name = "skill_id")
     )
-    private Set<Skill> skills = new HashSet<>();
+    private List<Skill> skills = new ArrayList<>();
 
     @OneToOne
     @JoinColumn(name = "user_id")
